@@ -1,0 +1,969 @@
+block-natural-mobs: true   # мобы сами не спавнятся — только боссы и мобы плагина
+# ===================== PrisonClassic 4.0 — режим «Prison Classic / Normal» по ТЗ =====================
+# Модули: level, data, trainer, upgrade, enchant, awaken, treasure, boss, mine, cell, church, needs, family,
+# six (тюремная банда), sell, shop, auction, crate, donate, dungeon, collection, game (ttt), merchant, basement, ui.
+
+config-version: 4          # при старте со старым конфигом (без версии/версия < 4) он сохраняется в config-old.yml и заменяется новым
+autosave-minutes: 5
+keep-inventory: true
+no-hunger: false
+
+# ----- Хранилище PlayerData (DataManager). type: yaml | mysql -----
+# В MySQL пишутся UUID, ник, уровень, монеты, звёзды, блоки, убийства, фракция, банда + полный снимок (потиповые блоки,
+# сытость, нужды, квесты, ветки коллекций, баффы). Драйвер MySQL входит в Paper.
+storage:
+  type: yaml
+  mysql:
+    host: localhost
+    port: 3306
+    database: prison
+    user: root
+    password: ""
+    ssl: false
+    table-prefix: "prison_"
+
+spawn:
+  protect-radius: 30
+
+combat:
+  evasion: 0.17
+  protect-blocks: true
+
+# ----- Уровни 1–40 (LevelManager): нужны И блоки (всего добыто), И монеты -----
+levels:
+  max: 40
+  table:
+    - {blocks: 2100, money: 15}        # 1 -> 2
+    - {blocks: 4000, money: 25}        # 2 -> 3
+    - {blocks: 7500, money: 25}        # 3 -> 4
+    - {blocks: 15000, money: 130}      # 4 -> 5
+    - {blocks: 22000, money: 350}      # 5 -> 6
+    - {blocks: 30000, money: 775}      # 6 -> 7
+    - {blocks: 41000, money: 850}      # 7 -> 8
+    - {blocks: 115000, money: 1600}    # 8 -> 9   (ТЗ: 115 000 блоков)
+    - {blocks: 185000, money: 3200}    # 9 -> 10  (ТЗ)
+    - {blocks: 260000, money: 6200}    # 10 -> 11 (ТЗ)
+    - {blocks: 380000, money: 12500}   # 11 -> 12 (ТЗ)
+    - {blocks: 575000, money: 25000}   # 12 -> 13 (ТЗ)
+    - {blocks: 810000, money: 50000}   # 13 -> 14 (ТЗ)
+    - {blocks: 1400000, money: 87500}  # 14 -> 15 (ТЗ)
+    - {blocks: 1624000, money: 112000}   # 15 -> 16  (далее: блоки x1.16, монеты x1.28 за уровень)
+    - {blocks: 1884000, money: 143500}   # 16 -> 17
+    - {blocks: 2185000, money: 183500}   # 17 -> 18
+    - {blocks: 2535000, money: 235000}   # 18 -> 19
+    - {blocks: 2941000, money: 301000}   # 19 -> 20
+    - {blocks: 3412000, money: 385500}   # 20 -> 21
+    - {blocks: 3958000, money: 493500}   # 21 -> 22
+    - {blocks: 4591000, money: 631500}   # 22 -> 23
+    - {blocks: 5326000, money: 808500}   # 23 -> 24
+    - {blocks: 6178000, money: 1035000}  # 24 -> 25
+    - {blocks: 7166000, money: 1325000}  # 25 -> 26
+    - {blocks: 8313000, money: 1696000}  # 26 -> 27
+    - {blocks: 9643000, money: 2171000}  # 27 -> 28
+    - {blocks: 11186000, money: 2779000} # 28 -> 29
+    - {blocks: 12976000, money: 3557000} # 29 -> 30
+    - {blocks: 15052000, money: 4553000} # 30 -> 31
+    - {blocks: 17460000, money: 5828000} # 31 -> 32
+    - {blocks: 20254000, money: 7460000} # 32 -> 33
+    - {blocks: 23495000, money: 9549000} # 33 -> 34
+    - {blocks: 27254000, money: 12222500} # 34 -> 35
+    - {blocks: 31615000, money: 15645000} # 35 -> 36
+    - {blocks: 36673000, money: 20025500} # 36 -> 37
+    - {blocks: 42541000, money: 25632500} # 37 -> 38
+    - {blocks: 49348000, money: 32809500} # 38 -> 39
+    - {blocks: 57244000, money: 41996000} # 39 -> 40
+  hp-per-level: 2.0          # +2 HP (+1 сердце) за каждый уровень
+  damage-every: 5            # +1 к базовому урону каждые 5 уровней...
+  damage-per-step: 1.0
+  damage-cap-level: 20       # ...вплоть до финального бонуса на 20 уровне (+4)
+  damage-per-level: 0.0      # старый мультипликатор урона отключён
+
+pickaxe:
+  enabled: false
+  material: DIAMOND_PICKAXE
+  efficiency-base: 2
+  levels-per-efficiency: 8
+  efficiency-max: 6
+
+# ----- Продажа (SellService). /sell — только с флагом AutoSell_Premium; остальные — торговцы шахт -----
+# Цена блока по умолчанию: (1.27^(ур.шахты−1) / 64) × множитель блока; руда без «Шёлка» — 60% от цены руды.
+sell:
+  level-bonus: 0.01
+  prices:
+    ROTTEN_FLESH: 0.3
+    MAGMA_CREAM: 1
+    COD: 0.8
+    SALMON: 1.2
+    RABBIT_HIDE: 0.5
+  stack-prices:
+    DIRT: 0.8
+    SAND: 0.9
+    GRAVEL: 0.9
+    RED_SAND: 12.8
+    FLINT: 4
+    OAK_LOG: 1.5
+    LIGHT_GRAY_WOOL: 2
+    MELON: 1.5
+    STONE: 3.45
+    COBBLESTONE: 3
+    COAL_BLOCK: 40
+    GREEN_TERRACOTTA: 3
+    YELLOW_TERRACOTTA: 7
+    RED_TERRACOTTA: 25
+    SOUL_SAND: 10
+    NETHERRACK: 4
+    MAGMA_BLOCK: 9
+    COBWEB: 12
+    WHITE_WOOL: 25
+    EMERALD_BLOCK: 35.2
+    SNOW_BLOCK: 8.7
+    SNOWBALL: 16.8
+    PRISMARINE: 36.8
+    PRISMARINE_BRICKS: 43.5
+    DARK_PRISMARINE: 51.2
+    SEA_LANTERN: 120
+    OBSIDIAN: 422             # мета «Бум+Бум» — фарм денег на обсидиане
+    CRYING_OBSIDIAN: 500
+    GLOWSTONE: 163
+    HAY_BLOCK: 140
+    PUMPKIN: 92.8
+
+# ----- Зачарования (EnchantService / EnchantListener) -----
+enchants:
+  slots:
+    armor: 3
+    weapon: 2
+    tool: 4
+  max-book-chance: 80
+  proc-chance: 0.12
+  proc-factor: 8
+  boom:                     # Бум I–III: сферический подрыв радиусом 1/2/3, дроп сразу в монеты, блоки в статистику
+    chance1: 0.015
+    chance2: 0.010
+    chance3: 0.008
+  totem:                    # Тотем бессмертия I–II (только из Древнего ключа, 1 книга на сет)
+    cooldown-seconds-1: 300
+    cooldown-seconds-2: 180
+
+keys:
+  perk-common-per-level: 0.0004
+  keymaster-dk-1: 0.00002
+  keymaster-dk-2: 0.00004
+  keymaster-legendary: 0.0000125
+
+exchange:
+  common-per-dk: 64
+  stars-per-dk: 14          # Древний ключ = 14 Звёзд (как у Донат-NPC)
+  dk-per-legendary: 16
+  dust-per-100: 15
+
+milestones:
+  m1: {blocks: 1000, coins: 20}
+  m2: {blocks: 5000, coins: 100, key: common}
+  m3: {blocks: 10000, coins: 250, key: common}
+  m4: {blocks: 25000, coins: 600, key: common, keys: 2}
+  m5: {blocks: 50000, coins: 1500, key: dk}
+  m6: {blocks: 100000, coins: 3000, key: dk}
+  m7: {blocks: 250000, coins: 8000, key: dk, keys: 2}
+  m8: {blocks: 500000, coins: 15000, key: dk, keys: 3}
+  m9: {blocks: 1000000, coins: 30000, key: dk, keys: 5}
+  m10: {blocks: 5000000, coins: 150000, key: dk, keys: 10}
+
+# ----- Тренер (TrainerService): навыки с тирами и требованиями + экономические перки -----
+# req: block:<МАТЕРИАЛ> — вскопать блоков этого типа; mob:<id> — убить мобов; player_kills — убийства игроков; level — уровень.
+# value — суммарное значение навыка на тире.
+trainer:
+  max-discount: 0.10
+  curse:
+    seconds: 4              # дебафф «Проклятие»: Иссушение I + Слабость I
+  active:
+    radius: 6
+    cooldown: 60
+  skills:
+    agility:
+      name: "Ловкость"
+      material: FEATHER
+      desc: "Скорость бега"
+      tiers:
+        - {cost: 300, value: 0.03, req: {"block:DIRT": 2000}}
+        - {cost: 800, value: 0.06, req: {"block:STONE": 5000}}
+        - {cost: 1800, value: 0.09, req: {"block:COBWEB": 1000, "mob:rat": 300}}
+        - {cost: 4000, value: 0.12, req: {"block:EMERALD_BLOCK": 3000, "mob:zombie": 300}}
+        - {cost: 9000, value: 0.15, req: {"block:PRISMARINE": 3000, player_kills: 100}}
+    luck:
+      name: "Удача"
+      material: RABBIT_FOOT
+      desc: "Шанс повышенного (x2) дропа редких руд"
+      tiers:
+        - {cost: 400, value: 0.01, req: {"block:COAL_ORE": 500}}
+        - {cost: 900, value: 0.02, req: {"block:IRON_ORE": 800, "block:GOLD_ORE": 300}}
+        - {cost: 1800, value: 0.03, req: {"block:DIAMOND_ORE": 300, "block:GOLD_BLOCK": 100}}
+        - {cost: 3500, value: 0.045, req: {"block:LAPIS_ORE": 500, "block:EMERALD_BLOCK": 2000}}
+        - {cost: 7000, value: 0.06, req: {"block:DIAMOND_BLOCK": 100, "block:OBSIDIAN": 500}}
+    curse:
+      name: "Проклятие"
+      material: WITHER_ROSE
+      desc: "+2% шанс наложить «Проклятие» при PVP-ударе за тир (до 12%)"
+      tiers:
+        - {cost: 500, value: 0.02, req: {"block:GOLD_BLOCK": 100, player_kills: 50, "mob:zombie": 100}}
+        - {cost: 750, value: 0.04, req: {"block:GOLD_BLOCK": 250, "block:DIAMOND_BLOCK": 25, player_kills: 100, "mob:zombie": 200}}
+        - {cost: 1000, value: 0.06, req: {"block:GOLD_BLOCK": 400, "block:DIAMOND_BLOCK": 50, player_kills: 250, "mob:zombie": 350}}
+        - {cost: 1500, value: 0.08, req: {"block:GOLD_BLOCK": 600, "block:DIAMOND_BLOCK": 75, player_kills: 400, "mob:zombie": 500}}
+        - {cost: 2200, value: 0.10, req: {"block:GOLD_BLOCK": 800, "block:DIAMOND_BLOCK": 100, player_kills: 700, "mob:zombie": 650, "mob:mini_slime": 250}}
+        - {cost: 3000, value: 0.12, req: {"block:GOLD_BLOCK": 1000, "block:DIAMOND_BLOCK": 150, "block:OBSIDIAN": 100, player_kills: 1000, "mob:zombie": 750, "mob:mini_slime": 250}}
+    mobdmg:
+      name: "Урон по мобам"
+      material: IRON_SWORD
+      desc: "+1 единица чистого урона по PVE-сущностям за тир"
+      tiers:
+        - {cost: 500, value: 1, req: {"mob:rat": 100}}
+        - {cost: 1125, value: 2, req: {"mob:rat": 250}}
+        - {cost: 1750, value: 3, req: {"mob:rat": 450, "mob:zombie": 50}}
+        - {cost: 2375, value: 4, req: {"mob:rat": 700, "mob:zombie": 150}}
+        - {cost: 3000, value: 5, req: {"mob:rat": 950, "mob:zombie": 300}}
+        - {cost: 3625, value: 6, req: {"mob:rat": 1200, "mob:zombie": 450}}
+        - {cost: 4250, value: 7, req: {"mob:rat": 1500, "mob:zombie": 600}}
+        - {cost: 4875, value: 8, req: {"mob:rat": 1750, "mob:zombie": 800, "mob:mini_slime": 250}}
+        - {cost: 5500, value: 9, req: {"mob:rat": 2000, "mob:zombie": 1000, "mob:mini_slime": 250}}
+    crit:
+      name: "Критический удар"
+      material: DIAMOND_SWORD
+      desc: "+3% шанс крита по игроку за тир (до 15%)"
+      tiers:
+        - {cost: 1000, value: 0.03, req: {"block:OBSIDIAN": 50}}
+        - {cost: 1800, value: 0.06, req: {"block:OBSIDIAN": 100, "block:PRISMARINE_BRICKS": 100}}
+        - {cost: 2800, value: 0.09, req: {"block:OBSIDIAN": 150, "block:DARK_PRISMARINE": 150, "block:PRISMARINE_BRICKS": 150}}
+        - {cost: 4000, value: 0.12, req: {"block:OBSIDIAN": 250, "block:DARK_PRISMARINE": 250, "block:PRISMARINE_BRICKS": 250}}
+        - {cost: 5500, value: 0.15, req: {"block:OBSIDIAN": 400, "block:DARK_PRISMARINE": 400, "block:PRISMARINE_BRICKS": 400}}
+  perks:
+    discount: {name: "Скидки", material: GOLD_INGOT, max: 10, step: 0.01, base-cost: 2000, growth: 1.5, desc: "-1% на уровни, навыки и /up (макс. 10%)"}
+    coin: {name: "Бустер монет", material: EMERALD, max: 20, step: 0.01, base-cost: 800, growth: 1.35, desc: "+1% к продаже за уровень"}
+    blocks: {name: "Бустер блоков", material: DIAMOND_PICKAXE, max: 20, step: 0.01, base-cost: 800, growth: 1.35, desc: "+1% к счётчику блоков за уровень"}
+    keydrop: {name: "Дроп ключей", material: TRIPWIRE_HOOK, max: 10, base-cost: 1200, growth: 1.5, desc: "Шанс обычного ключа за блок"}
+    stars: {name: "Шанс звёзд", material: NETHER_STAR, max: 10, step: 0.01, min-level: 10, base-cost: 5000, growth: 1.45, desc: "+1% звёзд с боссов (макс. 10%)"}
+    crit_damage: {name: "Урон крита", material: BLAZE_POWDER, max: 20, base-cost: 1000, growth: 1.4, desc: "Крит x1.5 +5% за уровень"}
+    active: {name: "Активка", material: ENDER_EYE, max: 3, min-level: 30, base-cost: 100000, growth: 3.0, desc: "/active: крадёт по сердцу у всех вокруг"}
+
+# ----- Донат: права prison.donate.1..5. AutoSell_Premium — также право AutoSell_Premium или покупка у Донат-NPC -----
+donate:
+  base-tp-seconds: 3.0
+  site: "сайт сервера"     # где покупать (показывается в /donate)
+  # Привилегии: право prison.donate.N (выдавайте через LuckPerms после оплаты). Старшая включает перки младших.
+  #   sell — /sell в любой точке, autosell — /autosell, no-needs — без нужд, daily-keys/daily-dk — ежедневно в /donate
+  1: {name: "VIP", color: "green", tp-seconds: 2.8, coin-boost: 0.2, daily-keys: 1}
+  2: {name: "PREMIUM", color: "aqua", tp-seconds: 2.6, coin-boost: 0.4, sell: true, daily-keys: 2}
+  3: {name: "ELITE", color: "light_purple", tp-seconds: 2.45, coin-boost: 0.6, sell: true, autosell: true, daily-keys: 3}
+  4: {name: "LEGEND", color: "gold", tp-seconds: 2.33, coin-boost: 0.75, sell: true, autosell: true, no-needs: true, daily-keys: 5}
+  5: {name: "EVO", color: "red", tp-seconds: 2.15, coin-boost: 1.0, block-boost: 0.2, trainer-discount: 0.05, sell: true, autosell: true, no-needs: true, daily-keys: 7, daily-dk: 1}
+
+donate-npc:
+  dk-stars: 14              # Древний ключ у Донат-NPC
+  autosell-premium:
+    stars: 120
+    days: 30
+
+contraband:
+  chance: 0.004
+  value: 20
+
+# ----- Камеры (CellManager + CellService): с 8 уровня, 4 тира -----
+cells:
+  min-level: 8
+  price: 250
+  refund: 0.5
+  upgrade-costs: [5000, 15000, 40000]   # 1->2, 2->3, 3->4
+  tiers:
+    sieve: 2
+    shower: 3
+    shelf: 4
+  shower-luck-minutes: 10   # душ с мылом: бафф «Удача»
+  shower-luck-bonus: 0.05   # +5% к шансу x2 редких руд
+
+# ----- Фракции -----
+factions:
+  min-level: 5
+  leave-cost: 500
+  balance:                  # динамическая фракционная скидка (уровни, тренер, /up)
+    enabled: true
+    window-hours: 168       # окно среднего исторического онлайна (EMA), 7 суток
+    factor: 0.5             # скидка = (средний онлайн всех − онлайн фракции) / средний × factor
+    max-discount: 0.25
+  points:                   # PointService: x2 блоков на Базе за 1 точку, x3 за 2, x4 за 3
+    radius: 4
+    capture-seconds: 60
+    upgrade-discount-per-point: 0.03
+    list:
+      a: "Запад"
+      b: "Восток"
+      c: "Север"
+  list:
+    guards: {name: "Стража", color: "blue", sell-bonus: 1.00, boss-bonus: 1.15, damage-bonus: 1.10}
+    thieves: {name: "Воры", color: "red", sell-bonus: 1.12, boss-bonus: 1.00, damage-bonus: 1.00}
+    miners: {name: "Шахтёры", color: "gold", sell-bonus: 1.20, boss-bonus: 1.00, damage-bonus: 0.95}
+
+mines:
+  blocks-per-tick: 12000
+
+build:
+  auto: true
+  world: prison_classic
+  y: 64
+  blocks-per-tick: 15000
+
+# ----- Боссы (BossManager): полный реестр. HP > 1024 — масштабирование урона -----
+bosses:
+  distribution:
+    top-pool: 0.7           # доля пула монет для топ-3 по урону
+    min-share: 0.05         # порог урона для утешительного дропа
+  evil-pumpkin:
+    type: evil_pumpkin
+    arena-radius: 13
+    magma-seconds: 60
+    magma-damage: 2.0
+    dispensers: 8
+    totem-health: 60
+    regen-per-second: 0.01
+    pass-mine: "20"
+    pass-chance-mine: 0.0002 # Боевой пропуск при копании на шахте 20
+  types:
+    base_zombie:
+      name: "<red><bold>Королевский зомби"
+      entity: ZOMBIE
+      helmet: GOLDEN_HELMET
+      health: 250
+      damage: 6
+      reward: 400
+      min-level: 5
+      respawn-seconds: 1200
+      special: {name: "Мозг", item: brain, chance: 1.0, min: 1, max: 1}
+    sewer_slime:
+      name: "<dark_green><bold>Сточный слизень"
+      entity: SLIME
+      size: 6
+      health: 400
+      damage: 7
+      reward: 1000
+      min-level: 6
+      respawn-seconds: 3000
+      stars: {min: 3, max: 12}
+      special: {name: "Сточный порошок", material: GUNPOWDER, chance: 0.35, stars: 3}
+    brood_mother:
+      name: "<dark_gray><bold>Матка"
+      entity: SPIDER
+      scale: 2.0
+      health: 750
+      damage: 8
+      reward: 1000
+      min-level: 10
+      respawn-seconds: 5400
+      stars: {min: 3, max: 12}
+      special: {name: "Паучий глаз", material: SPIDER_EYE, chance: 0.35, stars: 4}
+    yeti:
+      name: "<aqua><bold>Йети"
+      entity: POLAR_BEAR
+      scale: 1.6
+      health: 875
+      damage: 9
+      reward: 1500
+      min-level: 13
+      respawn-seconds: 10800
+      stars: {min: 3, max: 16}
+      special: {name: "Снежок", material: SNOWBALL, chance: 0.35, stars: 5}
+    leviathan:
+      name: "<dark_aqua><bold>Левиафан"
+      entity: ELDER_GUARDIAN
+      helmet: ""
+      health: 950
+      damage: 10
+      reward: 1750
+      min-level: 20
+      respawn-seconds: 9000
+      stars: {min: 3, max: 24}
+      special: {name: "Пламенный эфес", material: BLAZE_ROD, chance: 1.0, min: 1, max: 2, stars: 6}
+    sea_guardian:
+      name: "<blue><bold>Хранитель подводного мира"
+      entity: DROWNED
+      weapon: TRIDENT
+      scale: 1.6
+      health: 1500
+      damage: 11
+      reward: 2500
+      min-level: 16
+      respawn-seconds: 14400
+      respawn-max-seconds: 18000
+      stars: {min: 9, max: 32}
+      special: {name: "Мокрая губка", material: WET_SPONGE, chance: 0.35, stars: 8}
+    sky_lord:
+      name: "<white><bold>Небесный владыка"
+      entity: BREEZE
+      helmet: ""
+      scale: 2.0
+      health: 1500
+      damage: 12
+      reward: 3000
+      min-level: 18
+      respawn-seconds: 18000
+      respawn-max-seconds: 21600
+      stars: {min: 16, max: 36}
+      special: {name: "Слеза гаста", material: GHAST_TEAR, chance: 0.35, stars: 10}
+    evil_pumpkin:
+      name: "<gold><bold>Злой Тыков"
+      entity: ZOMBIE
+      helmet: JACK_O_LANTERN
+      weapon: GOLDEN_HOE
+      scale: 1.6
+      health: 2000
+      damage: 12
+      reward: 3000
+      min-level: 20
+      respawn-seconds: 21600
+      stars: {min: 21, max: 34}
+      special: {name: "Тыква", material: PUMPKIN, chance: 1.0, stars: 10}
+    # ----- Мобы-миньоны -----
+    rat:
+      name: "<gray>Крыса"
+      entity: SILVERFISH
+      minion: true
+      helmet: ""
+      health: 14
+      damage: 2.3
+      reward: 0.5
+      min-level: 3
+      respawn-seconds: 25
+      drops:
+        - {item: ROTTEN_FLESH, chance: 1.0, min: 1, max: 1}
+    rabbit:
+      name: "<white>Кролик"
+      entity: RABBIT
+      minion: true
+      helmet: ""
+      health: 6
+      damage: 0
+      reward: 0.5
+      min-level: 1
+      respawn-seconds: 30
+      drops:
+        - {item: RABBIT_HIDE, chance: 0.5, min: 1, max: 1}
+    zombie:
+      name: "<dark_green>Зомби"
+      entity: ZOMBIE
+      minion: true
+      health: 17
+      damage: 2.6
+      reward: 1.5
+      min-level: 5
+      respawn-seconds: 25
+      drops:
+        - {item: ROTTEN_FLESH, chance: 1.0, min: 2, max: 2}
+    basement_zombie:
+      name: "<dark_green>Зомби подвала"
+      entity: ZOMBIE
+      minion: true
+      health: 26
+      damage: 3.5
+      reward: 2
+      min-level: 6
+      respawn-seconds: 25
+      drops:
+        - {item: GUTS, chance: 0.6, min: 1, max: 2}        # кишки
+        - {item: COINS, chance: 1.0, min: 2, max: 6}       # монеты
+        - {item: GOLD_NUGGET, chance: 0.3, min: 1, max: 3} # золото
+        - {item: GOLD_INGOT, chance: 0.05, min: 1, max: 1}
+        - {item: DUST, chance: 0.08, min: 1, max: 1}       # порошок улучшения книг
+    magma_mini:
+      name: "<red>Магма-кубик"
+      entity: MAGMA_CUBE
+      minion: true
+      helmet: ""
+      health: 18
+      damage: 2.7
+      reward: 3
+      min-level: 7
+      respawn-seconds: 25
+      size: 1
+      drops:
+        - {item: MAGMA_CREAM, chance: 0.6, min: 1, max: 1}
+    mini_slime:
+      name: "<green>Пыльный слизень"
+      entity: SLIME
+      minion: true
+      helmet: ""
+      health: 20
+      damage: 3.0
+      reward: 4
+      min-level: 11
+      respawn-seconds: 25
+      size: 1
+      drops:
+        - {item: DUST, chance: 0.1, min: 1, max: 1}
+        - {item: BATTLE_PASS, chance: 0.004, min: 1, max: 1}   # Боевой пропуск (Злой Тыков)
+    cat:
+      name: "<yellow>Кошечка"
+      entity: CAT
+      minion: true
+      helmet: ""
+      health: 22
+      damage: 3.3
+      reward: 6
+      min-level: 14
+      respawn-seconds: 25
+      drops:
+        - {item: COD, chance: 0.7, min: 1, max: 2}
+        - {item: SALMON, chance: 0.3, min: 1, max: 1}
+    pigzombie:
+      name: "<gold>Свинозомби"
+      entity: ZOMBIFIED_PIGLIN
+      minion: true
+      helmet: ""
+      health: 23
+      damage: 3.4
+      reward: 8
+      min-level: 14
+      respawn-seconds: 25
+      drops:
+        - {item: ROTTEN_FLESH, chance: 1.0, min: 1, max: 2}
+        - {item: SHARD, chance: 0.08, min: 1, max: 1}
+    lufonia_zombie:
+      name: "<gray>Зомби Люфонии"
+      entity: ZOMBIE_VILLAGER
+      minion: true
+      health: 60
+      damage: 7.0
+      reward: 60
+      min-level: 20
+      respawn-seconds: 20
+      drops:
+        - {item: SHARD, chance: 0.4, min: 1, max: 2}
+        - {item: ROTTEN_FLESH, chance: 1.0, min: 1, max: 2}
+
+quests:
+  daily-count: 4
+  brain:                    # «Мозг» Королевского зомби — сдаётся Квестовику
+    per-reward: 5
+    coins: 300
+  pool:
+    mine_500: {type: MINE, amount: 500, reward: 10, desc: "Добыть 500 блоков"}
+    mine_2000: {type: MINE, amount: 2000, reward: 40, desc: "Добыть 2000 блоков"}
+    sell_20000: {type: SELL, amount: 500, reward: 50, desc: "Заработать 500 продажей"}
+    boss_1: {type: BOSS, amount: 1, reward: 200, desc: "Убить босса"}
+    rats_50: {type: MOB, amount: 50, reward: 30, desc: "Убить 50 мобов (крысы, зомби, слизни)"}
+    mobs_200: {type: MOB, amount: 200, reward: 120, desc: "Убить 200 мобов"}
+    mine_10000: {type: MINE, amount: 10000, reward: 200, desc: "Добыть 10 000 блоков"}
+    kill_3: {type: KILL, amount: 3, reward: 100, desc: "Убить 3 игроков"}
+
+scoreboard:
+  update-ticks: 20
+  title: "<gradient:#ff5555:#ffaa00><bold>PRISON CLASSIC</bold></gradient>"
+  lines:
+    - " "
+    - "<gray>Уровень: <gold><level> <gray>(<red><hp> HP<gray>)"
+    - "<gray>Блоки: <white><progress>"
+    - "<gray>Деньги: <green>$<balance>"
+    - "  "
+    - "<gray>Фракция: <faction>"
+    - "<gray>Камера: <white><cell> <gray>| Банда: <white><gang>"
+    - "<gray>Коллекция: <white><collection>"
+    - "<gray>Церковь: <church>"
+    - "<gray>Бустер: <light_purple><booster>"
+    - "<gray>Нужды: <needs> <gray>| <sick>"
+    - "<gray>Продажа: <premium>"
+    - "   "
+    - "<yellow>play.example.net"
+
+messages:
+  prefix: "<dark_gray>[<gold>Prison</gold>]</dark_gray> "
+  no-permission: "<red>Нет прав."
+  no-spawn: "<red>Спавн ещё не установлен."
+  no-base: "<red>База вашей фракции ещё не установлена."
+  player-offline: "<red>Игрок не найден."
+  bad-number: "<red>Неверное число."
+  not-enough: "<red>Не хватает денег. Нужно: <yellow>$<cost>"
+  balance: "<gray>Баланс: <green>$<balance>"
+  pay-sent: "<gray>Вы перевели <green>$<amount></green> игроку <white><player>"
+  pay-got: "<gray>Вам перевёл <green>$<amount></green> игрок <white><player>"
+  inventory-full: "<red>Инвентарь полон! Продайте ресурсы торговцу шахты."
+  contraband-found: "<red>Вы нашли <bold>контрабанду</bold>! <gray>Продайте её торговцу."
+  sell-done: "<gray>Продано на <green>$<amount></green> <dark_gray>(множитель x<mult>)"
+  sell-nothing: "<red>Нечего продавать."
+  sell-premium-only: "<red>Команда /sell доступна только с флагом <gold>AutoSell_Premium</gold>. <gray>Продавайте ресурсы вручную у торговца шахты (NPC у входа) или купите премиум у Донат-NPC на спавне."
+  autosell-on: "<green>Автопродажа включена."
+  autosell-off: "<yellow>Автопродажа выключена."
+  booster-started: "<light_purple>Глобальный бустер продаж <bold>x<mult></bold> на <minutes> мин.!"
+  mine-unknown: "<red>Такой шахты нет. Список: /mine"
+  mine-locked: "<red>Шахта <white><mine></white> доступна с уровня <gold><level></gold>."
+  mine-reset-tp: "<yellow>Шахта <white><mine></white> обновляется, вас перенесло ко входу."
+  level-max: "<gold>У вас максимальный уровень!"
+  level-need-blocks: "<red>Нужно добыть больше блоков: <white><have>/<need>"
+  level-need-money: "<red>Не хватает денег для повышения. Нужно: <yellow>$<cost>"
+  level-up: "<green>Новый уровень: <gold><bold><level></bold> <gray>(+1 сердце)"
+  level-info: "<gray>Уровень <gold><level></gold> → <gold><next></gold>. Блоки: <white><blocks>/<need_blocks></white>, цена: <green>$<cost></green>. Повысить: <yellow>/lvl up"
+  faction-choose: "<yellow>Выберите фракцию: <white>/faction <gray>(бонусы к продаже, боссам и урону; меньше онлайн — больше скидка)"
+  faction-joined: "<gray>Вы вступили во фракцию <faction>"
+  faction-already: "<red>Вы уже во фракции. Сначала /fleave."
+  faction-none: "<red>Вы не состоите во фракции."
+  faction-unknown: "<red>Такой фракции нет."
+  faction-left: "<gray>Вы покинули фракцию (<yellow>$<cost></yellow>)."
+  faction-friendly: "<red>Нельзя бить своих!"
+  spawn-pvp: "<red>У спавна PvP запрещён."
+  cell-none: "<red>У вас нет камеры. Список: /cell list (с 8 уровня)"
+  cell-unknown: "<red>Такой камеры нет."
+  cell-have: "<red>У вас уже есть камера."
+  cell-taken: "<red>Эта камера занята."
+  cell-bought: "<green>Вы купили камеру <white><cell></white>. <gray>Улучшения: /cell upgrade"
+  cell-left: "<gray>Камера освобождена, возвращено <green>$<amount>"
+  cell-foreign: "<red>Это чужая камера."
+  cell-member-added: "<green><player> теперь может пользоваться вашей камерой."
+  cell-member-removed: "<gray><player> больше не имеет доступа."
+  boss-locked: "<red>Чтобы сражаться с этим боссом, нужен уровень <gold><level></gold>."
+  boss-reward: "<gray>Босс <boss></gray> <gray>повержен! Ваш вклад: <white><share>%</white>, награда <green>$<reward>"
+  boss-killed: "<gold>Босс <boss></gold> <gold>повержен! Больше всех урона: <white><player></white>"
+  wand-pos: "<gold>Точка <n> <gray>= <white><pos>"
+  quest-done: "<green>Квест выполнен: <white><quest> <gray>(+$<reward>)"
+
+starter-kit:
+  - WOODEN_AXE
+  - BREAD:16
+
+# ----- Прокачка предметов /up (UpgradeService). Редкость ступени: Обычный → Редкий → Эпический → Легендарный -----
+# fail: keep — фиксация уровня (монеты сгорают); downgrade — откат на шаг; break — уничтожение безвозвратно.
+upgrades:
+  pickaxe:
+    - {material: WOODEN_PICKAXE, level: 0}
+    - {material: WOODEN_PICKAXE, level: 1, cost: 2, chance: 100, mined: {STONE: 100}}
+    - {material: WOODEN_PICKAXE, level: 2, cost: 5, chance: 100, mined: {STONE: 300}}
+    - {material: WOODEN_PICKAXE, level: 3, cost: 10, chance: 95, mined: {STONE: 600}}
+    - {material: STONE_PICKAXE, level: 1, cost: 40, chance: 90, mined: {STONE: 1000, COAL_ORE: 100}, player-level: 3}
+    - {material: STONE_PICKAXE, level: 2, cost: 70, chance: 90, mined: {COAL_ORE: 250}}
+    - {material: STONE_PICKAXE, level: 3, cost: 110, chance: 85, mined: {COAL_ORE: 500}}
+    - {material: IRON_PICKAXE, level: 1, cost: 300, chance: 85, mined: {COAL_ORE: 700, COAL_BLOCK: 50}, player-level: 5}
+    - {material: IRON_PICKAXE, level: 2, cost: 450, chance: 80, mined: {COAL_BLOCK: 120}}
+    - {material: IRON_PICKAXE, level: 3, cost: 650, chance: 80, mined: {COAL_BLOCK: 200, IRON_ORE: 300}}
+    - {material: IRON_PICKAXE, level: 4, cost: 900, chance: 75, mined: {IRON_ORE: 800, GOLD_ORE: 300}, player-level: 9}
+    - {material: DIAMOND_PICKAXE, level: 2, cost: 1500, chance: 75, mined: {GOLD_ORE: 800, DIAMOND_ORE: 150}, player-level: 12}
+    - {material: DIAMOND_PICKAXE, level: 3, cost: 2500, chance: 70, blocks: 30000}
+    - {material: DIAMOND_PICKAXE, level: 4, cost: 4000, chance: 70, blocks: 60000, player-level: 16}
+    - {material: DIAMOND_PICKAXE, level: 5, cost: 8000, chance: 65, blocks: 150000, player-level: 20}
+    - {material: NETHERITE_PICKAXE, level: 5, cost: 15000, chance: 60, blocks: 400000, player-level: 25}
+    - {material: NETHERITE_PICKAXE, level: 6, cost: 40000, chance: 60, blocks: 1000000, player-level: 30}
+    - {material: NETHERITE_PICKAXE, level: 7, cost: 120000, chance: 55, blocks: 3000000, player-level: 35}
+    - {material: NETHERITE_PICKAXE, level: 8, cost: 300000, chance: 50, blocks: 7000000, player-level: 40}
+  # Лопата: мета — деревянная до Эффективности III на старте вайпа
+  shovel:
+    - {material: WOODEN_SHOVEL, level: 0}
+    - {material: WOODEN_SHOVEL, level: 1, cost: 2, chance: 100, mined: {DIRT: 100}}
+    - {material: WOODEN_SHOVEL, level: 2, cost: 4, chance: 100, mined: {DIRT: 300}}
+    - {material: WOODEN_SHOVEL, level: 3, cost: 8, chance: 95, mined: {DIRT: 600}}
+    - {material: STONE_SHOVEL, level: 2, cost: 30, chance: 90, mined: {SAND|RED_SAND: 400, DIRT: 800, GRAVEL: 300}, player-level: 2}
+    - {material: STONE_SHOVEL, level: 3, cost: 60, chance: 85, mined: {SAND|RED_SAND: 900, DIRT: 1500, GRAVEL: 700}}
+    - {material: IRON_SHOVEL, level: 2, cost: 250, chance: 80, mined: {SAND|RED_SAND: 1800, GRAVEL: 1400, SOUL_SAND: 200}, player-level: 7}
+    - {material: IRON_SHOVEL, level: 3, cost: 500, chance: 75, mined: {SOUL_SAND: 600, SNOW_BLOCK: 300}}
+    - {material: DIAMOND_SHOVEL, level: 3, cost: 1500, chance: 70, blocks: 30000, player-level: 12}
+    - {material: DIAMOND_SHOVEL, level: 5, cost: 8000, chance: 60, blocks: 150000, player-level: 20}
+  # Топор: мета — деревянный до Эффективности III для спидрана арбузов
+  axe:
+    - {material: WOODEN_AXE, level: 0}
+    - {material: WOODEN_AXE, level: 1, cost: 2, chance: 100, mined: {"*_LOG": 80}}
+    - {material: WOODEN_AXE, level: 2, cost: 4, chance: 100, mined: {"*_LOG": 250}}
+    - {material: WOODEN_AXE, level: 3, cost: 8, chance: 95, mined: {"*_LOG": 500}}
+    - {material: STONE_AXE, level: 2, cost: 30, chance: 90, mined: {"*_LOG": 1000, MELON: 200}, player-level: 2}
+    - {material: STONE_AXE, level: 3, cost: 60, chance: 85, mined: {"*_LOG": 1800, MELON: 500}}
+    - {material: IRON_AXE, level: 2, cost: 250, chance: 80, mined: {"*_LOG": 3000, MELON: 1500}, player-level: 6}
+    - {material: IRON_AXE, level: 3, cost: 500, chance: 75, mined: {"*_LOG": 5000, MUSHROOM_STEM: 400}}
+    - {material: DIAMOND_AXE, level: 3, cost: 1500, chance: 70, blocks: 30000, player-level: 12}
+    - {material: DIAMOND_AXE, level: 5, cost: 8000, chance: 60, blocks: 150000, player-level: 20}
+  # Меч: на низких уровнях — фиксация (keep), с железного — откат (downgrade)
+  sword:
+    - {material: WOODEN_SWORD, level: 0}
+    - {material: WOODEN_SWORD, level: 1, cost: 15, chance: 100, kills: {rat: 15}, fail: keep}
+    - {material: WOODEN_SWORD, level: 2, cost: 30, chance: 100, kills: {rat: 50}, fail: keep}
+    - {material: WOODEN_SWORD, level: 3, cost: 70, chance: 95, kills: {rat: 100}, fail: keep}
+    - {material: STONE_SWORD, level: 0, cost: 110, chance: 90, kills: {rat: 215}, fail: keep}
+    - {material: STONE_SWORD, level: 1, cost: 160, chance: 85, kills: {rat: 300, zombie: 25}, fail: keep}
+    - {material: STONE_SWORD, level: 2, cost: 205, chance: 80, kills: {rat: 390, zombie: 50}, fail: keep}
+    - {material: STONE_SWORD, level: 3, cost: 265, chance: 80, kills: {rat: 500, zombie: 125}, fail: keep}
+    - {material: IRON_SWORD, level: 0, cost: 380, chance: 75, kills: {rat: 600, zombie: 150}}
+    - {material: IRON_SWORD, level: 1, cost: 540, chance: 70, kills: {rat: 1300, zombie: 300, mini_slime: 20}}
+    - {material: IRON_SWORD, level: 2, cost: 700, chance: 65, kills: {rat: 1600, zombie: 400, mini_slime: 50}}
+    - {material: IRON_SWORD, level: 3, cost: 990, chance: 65, kills: {rat: 2000, zombie: 500, mini_slime: 75}}
+    - {material: DIAMOND_SWORD, level: 0, cost: 1500, chance: 60, kills: {rat: 2500, zombie: 600, mini_slime: 125}}
+    - {material: DIAMOND_SWORD, level: 1, cost: 2000, chance: 55, kills: {rat: 3000, zombie: 700, mini_slime: 200}}
+    - {material: DIAMOND_SWORD, level: 2, cost: 5000, chance: 55, kills: {rat: 3500, zombie: 800, mini_slime: 300}, player-level: 15}
+    - {material: DIAMOND_SWORD, level: 3, cost: 12000, chance: 50, kills: {zombie: 1200, mini_slime: 450}, player-level: 20}
+    - {material: NETHERITE_SWORD, level: 3, cost: 40000, chance: 50, kills: {zombie: 2000, mini_slime: 700}, player-level: 28, fail: keep}
+    - {material: NETHERITE_SWORD, level: 4, cost: 120000, chance: 45, kills: {zombie: 3000, mini_slime: 1000}, player-level: 35}
+    - {material: NETHERITE_SWORD, level: 5, cost: 400000, chance: 40, kills: {zombie: 4500, mini_slime: 1500}, player-level: 40}
+  # Лук (Обычный): при неудаче на любой стадии уничтожается безвозвратно со всеми чарами. Шанс 90% → 50%
+  bow:
+    - {material: BOW, level: 0}
+    - {material: BOW, level: 1, cost: 40, chance: 90, webs: 400}
+    - {material: BOW, level: 2, cost: 80, chance: 80, webs: 800}
+    - {material: BOW, level: 3, cost: 160, chance: 70, webs: 1600}
+    - {material: BOW, level: 4, cost: 320, chance: 60, webs: 3200}
+    - {material: BOW, level: 5, cost: 1000, chance: 50, webs: 7500}
+  # Огненный лук (лук с «Заговором огня»): та же механика уничтожения
+  fire_bow:
+    - {material: BOW, level: 0}
+    - {material: BOW, level: 1, cost: 120, chance: 90, webs: 600}
+    - {material: BOW, level: 2, cost: 240, chance: 80, webs: 1200}
+    - {material: BOW, level: 3, cost: 480, chance: 70, webs: 2400}
+    - {material: BOW, level: 4, cost: 960, chance: 60, webs: 4800}
+    - {material: BOW, level: 5, cost: 3000, chance: 50, webs: 7500}
+  # Броня: на низких уровнях — фиксация, затем — откат
+  armor:
+    - {material: LEATHER, level: 0}
+    - {material: LEATHER, level: 1, cost: 20, chance: 100, kills: {rat: 20}}
+    - {material: LEATHER, level: 2, cost: 40, chance: 95, kills: {rat: 60}}
+    - {material: CHAINMAIL, level: 1, cost: 100, chance: 90, kills: {rat: 150}}
+    - {material: CHAINMAIL, level: 2, cost: 200, chance: 85, kills: {rat: 300, zombie: 20}}
+    - {material: IRON, level: 1, cost: 400, chance: 80, kills: {rat: 600, zombie: 60}}
+    - {material: IRON, level: 2, cost: 700, chance: 75, kills: {rat: 1000, zombie: 120}, fail: downgrade}
+    - {material: IRON, level: 3, cost: 1100, chance: 70, kills: {rat: 1500, zombie: 200, mini_slime: 20}, fail: downgrade}
+    - {material: DIAMOND, level: 1, cost: 2000, chance: 65, kills: {rat: 2200, zombie: 300, mini_slime: 50}, fail: downgrade}
+    - {material: DIAMOND, level: 2, cost: 3500, chance: 60, kills: {rat: 3000, zombie: 400, mini_slime: 100}, fail: downgrade}
+    - {material: DIAMOND, level: 3, cost: 7000, chance: 55, kills: {rat: 3600, zombie: 500, mini_slime: 150}, player-level: 15, fail: downgrade}
+    - {material: DIAMOND, level: 4, cost: 15000, chance: 50, kills: {rat: 4250, zombie: 600, mini_slime: 200}, player-level: 20, fail: downgrade}
+    - {material: NETHERITE, level: 4, cost: 60000, chance: 45, kills: {zombie: 1500, mini_slime: 600}, player-level: 30, fail: downgrade}
+
+# ----- Цыган (скрещивание) -----
+gypsy:
+  fire-sword:
+    need-sharpness: 1
+    stars: 20
+  fire-sword-2:
+    coins: 3000
+    kills: {rat: 3500, zombie: 800, mini_slime: 300}
+
+shop:
+  items:
+    - {material: APPLE, amount: 16, price: 2}
+    - {material: BREAD, amount: 16, price: 3}
+    - {material: COOKED_BEEF, amount: 16, price: 8}
+    - {special: toilet, amount: 8, price: 1}
+    - {special: soap, amount: 8, price: 2}
+    - {material: WOODEN_PICKAXE, amount: 1, price: 1}
+    - {material: WOODEN_SHOVEL, amount: 1, price: 1}
+    - {material: WOODEN_AXE, amount: 1, price: 1}
+    - {material: WOODEN_SWORD, amount: 1, price: 1}
+    - {material: LEATHER_HELMET, amount: 1, price: 2}
+    - {material: LEATHER_CHESTPLATE, amount: 1, price: 3}
+    - {material: LEATHER_LEGGINGS, amount: 1, price: 2}
+    - {material: LEATHER_BOOTS, amount: 1, price: 2}
+    - {material: BOW, amount: 1, price: 40, level: 5}
+    - {material: ARROW, amount: 32, price: 4, level: 5}
+    - {material: TORCH, amount: 16, price: 1}
+
+# ----- Нужды (NeedsService): туалет → Медлительность, грязь → Тошнота, усталость → Утомление; 100 → Слабость -----
+needs:
+  enabled: true
+  threshold: 70
+  toilet-per-minute: 1.4
+  shower-per-minute: 0.9
+  sleep-per-minute: 0.7
+  without-item: 50          # душ без мыла снимает только 50
+  no-paper-dirt: 40         # туалет без бумаги: +40 грязи и «грязный» статус до душа
+  toilet-blocks: [HOPPER]
+  shower-blocks: [WATER_CAULDRON]
+
+# ----- Церковь (ChurchService): служба 4 раза в сутки по МСК, внутри кубоида церкви -----
+church:
+  disease-chance-per-minute: 0.004
+  disease-min-level: 3
+  charm-price: 15
+  timezone: "Europe/Moscow"
+  service-times: ["00:55", "06:55", "12:55", "18:55"]
+  service-minutes: 10
+  radius: 12                # запасной вариант, если не задан кубоид church.a/church.b
+  haste-level: 2
+  first-minute-buff-minutes: 20   # первая минута службы — 20 минут баффа
+  per-minute-buff-minutes: 5      # каждая следующая минута — ещё +5
+  max-buff-minutes: 40            # максимум 40 минут активной игры (Старовер — x2)
+  sell-bonus: 0.25                # множитель продаваемых ресурсов на время баффа
+
+# ----- Сокровища шахт (TreasureService): номер шахты → сокровище -----
+treasures:
+  chance: 0.0006
+  spider-essence-bonus: 0.10
+  mines:
+    "3": haste
+    "5": rooster            # Карьер — Золотой петушок
+    "6": cheetah            # Подвал — Шкура гепарда
+    "6a": cheetah
+    "6b": cheetah
+    "7": hellfire           # Адская — Адское пламя
+    "8": wolf_heart         # Сумеречный лес — Сердце волка
+    "9": death_gifts        # Бездна — Дары смерти
+    "10": spider_essence    # Паучье логово — Паучья эссенция
+    "13": mushrooms         # Грибоедово — Грибочки три точки
+    "15": snow              # Логово Йети — Снежный снег
+    "17": brick             # Стройка — Кирпич
+    "21": frozen_blood      # Обсидиановая — Застывшая кровь
+    "23": paradise          # Небесный остров — Райское правосудие
+    "26": jack_pumpkin      # Кладбище — Тыква Джека
+
+# ----- Сундуки с ключами (CrateService). Тотем бессмертия — ТОЛЬКО в ДК-сундуке -----
+crates:
+  common:
+    name: "<white><bold>Обычный сундук"
+    loot:
+      - {type: money, min: 100, max: 500, weight: 26}
+      - {type: item, material: COOKED_BEEF, amount: 16, weight: 14}
+      - {type: special, id: toilet, amount: 4, weight: 12}
+      - {type: special, id: soap, amount: 4, weight: 10}
+      - {type: dust, pct: 10, amount: 1, weight: 10}
+      - {type: book, tier: common, weight: 7}
+      - {type: pass, id: basement_pass, amount: 1, weight: 6}
+      - {type: treasure, weight: 5}
+      - {type: booster, coin: true, global: false, value: 0.25, duration: 1d, weight: 4}
+      - {type: booster, coin: false, global: false, value: 0.25, duration: 1d, weight: 3}
+      - {type: custom_armor, material: IRON, protection: 2, weight: 3}
+      - {type: pmine, minutes: 20, weight: 2}
+      - {type: item, material: STONE_PICKAXE, amount: 1, weight: 2}
+      - {type: key, id: dk, amount: 1, weight: 1}
+  dk:
+    name: "<aqua><bold>Древний сундук (ДК)"
+    loot:
+      - {type: book, tier: dk, weight: 28}
+      - {type: book, ench: TOTEM, level: 1, chance: 20, weight: 3}   # Тотем бессмертия I
+      - {type: book, ench: TOTEM, level: 2, chance: 15, weight: 1}   # Тотем бессмертия II
+      - {type: money, min: 600, max: 2500, weight: 18}
+      - {type: dust, pct: 10, amount: 3, weight: 12}
+      - {type: treasure, weight: 9}
+      - {type: pass, id: basement_pass, amount: 2, weight: 6}
+      - {type: rare_pickaxe, efficiency: 2, weight: 4}
+      - {type: fire_bow, weight: 4}
+      - {type: custom_armor, material: DIAMOND, protection: 2, weight: 4}
+      - {type: booster, coin: true, global: false, value: 0.45, duration: 3d, weight: 6}
+      - {type: booster, coin: false, global: false, value: 0.45, duration: 3d, weight: 5}
+      - {type: pmine, minutes: 20, weight: 5}
+      - {type: stars, amount: 5, weight: 5}
+      - {type: dust, pct: 100, amount: 1, weight: 4}
+      - {type: booster, coin: true, global: true, value: 1.0, duration: 45m, weight: 2}
+      - {type: key, id: legendary, amount: 1, weight: 1}
+  legendary:
+    name: "<gold><bold>Легендарный сундук"
+    loot:
+      - {type: book, tier: legendary, weight: 40}
+      - {type: rare_pickaxe, efficiency: 4, weight: 6}
+      - {type: fire_bow, weight: 6}
+      - {type: custom_armor, material: DIAMOND, protection: 3, weight: 6}
+      - {type: dust, pct: 100, amount: 2, weight: 12}
+      - {type: booster, coin: true, global: false, value: 1.0, duration: 7d, weight: 8}
+      - {type: booster, coin: false, global: false, value: 1.0, duration: 7d, weight: 8}
+      - {type: booster, coin: true, global: true, value: 1.0, duration: 45m, weight: 6}
+      - {type: booster, coin: false, global: true, value: 1.0, duration: 45m, weight: 5}
+      - {type: pmine, minutes: 60, weight: 6}
+      - {type: stars, amount: 20, weight: 6}
+      - {type: money, min: 3000, max: 10000, weight: 4}
+
+# ----- Аукцион (AuctionService): /auc sell <цена>; снять свой лот — штраф 10% цены -----
+auction:
+  max-lots: 12
+  lot-hours: 48
+  remove-fee: 0.10
+  tax: 0.05
+
+private-mine:
+  donate-minutes-per-day:   # личная шахта по привилегиям (минут в день)
+    3: 20
+    4: 40
+    5: 60
+
+gangs:
+  min-level: 5
+  create-cost: 2500
+  levels:
+    1: {members: 5, sell-bonus: 0.00, block-bonus: 0.00}
+    2: {cost: 20000, members: 6, sell-bonus: 0.02, block-bonus: 0.02}
+    3: {cost: 80000, members: 7, sell-bonus: 0.04, block-bonus: 0.04}
+    4: {cost: 250000, members: 8, sell-bonus: 0.06, block-bonus: 0.06}
+    5: {cost: 700000, members: 10, sell-bonus: 0.08, block-bonus: 0.08}
+
+# ----- Семьи: брак (/family) -----
+families:
+  min-level: 5
+  wedding-cost: 500
+  divorce-cost: 1500
+  sell-bonus: 0.03
+  regen-radius: 15
+  tp-cooldown-seconds: 300
+
+# ----- Войны Семей за контрольные точки (/fw). Семья = клан (/gang) -----
+family-war:
+  assault-seconds: 300
+  capture-seconds: 90
+  capture-radius: 6
+  start-radius: 10
+  cooldown-seconds: 1800     # КД точки после штурма (не ставится, если проиграла нейтральная Семья)
+  income-per-hour: 2000      # доход владельцу в казну Семьи
+  points:
+    west: "Западный форт"
+    east: "Восточный форт"
+    south: "Южная мельница"
+
+# ----- Тюремная банда (/six): NPC-помощники в камере, едят арбузы, приносят щебень и монеты (и офлайн) -----
+sixes:
+  max: 4
+  buy-cost: [300, 900, 2500, 6000]
+  max-level: 3
+  upgrade-cost: [0, 1500, 5000]
+  gravel-per-hour-per-level: 8
+  coins-per-hour-per-level: 15
+  food-per-hour-per-level: 1.0
+  max-storage: 2048
+  gravel-price: 0.5
+  food: {MELON: 4, MELON_SLICE: 1, BREAD: 1, APPLE: 1, COOKED_BEEF: 2, COOKED_PORKCHOP: 2, COOKED_CHICKEN: 1.5, BAKED_POTATO: 1, ROTTEN_FLESH: 0.5}
+
+# ----- Сито (камера 2+ ур.): щебень, гравий, песок → драгоценные камни и реагенты -----
+sieve:
+  substance-price: 15
+  loot:
+    - {type: nothing, weight: 40}
+    - {type: dust, weight: 28}
+    - {type: substance, weight: 18}
+    - {type: gem, weight: 9}
+    - {type: key, weight: 3}
+    - {type: stars, weight: 2}
+
+# ----- Коллекции «Наследие Предков» (30 осколков) -----
+collections:
+  chance-any-block: 0.000166   # ~1/6000 — осколок «любой блок шахты»
+  chance-block: 0.000666       # ~1/1500 — осколок с конкретного блока
+  chance-mob: 0.0066           # ~1/150 — осколок с моба
+
+# ----- Подземелье «Вампирские катакомбы» -----
+dungeon:
+  min-level: 17
+  party-size: 3
+  pass-mine: "17"              # Стройка
+  pass-chance: 0.00025         # шанс пропуска за блок на Стройке
+  time-limit-minutes: 15
+  boss-health: 600
+  first-clear-exp: 20000       # опыт (очки прогресса уровня) каждому за первое закрытие
+  repeat-coins: 1500
+
+# ----- Тюремный подвал -----
+basement:
+  min-level: 6
+  session-minutes: 30          # сколько даёт один «Пропуск в подвал»
+
+# ----- Крестики-нолики (/ttt) -----
+ttt:
+  min-bet: 10
+  fee: 0.0
+  turn-seconds: 30
+
+# ----- Деревня Люфония: заточка и пробуждение -----
+awaken:
+  min-level: 20
+  stages: 12
+  shards: 12
+  coins: 3000
+  chance-drop: 5
+  weapon-damage-per-stage: 0.04
+  armor-reduction-per-stage: 0.005
+  tool-extra-per-stage: 0.03
+  forge:
+    max: 10
+    shards: 5
+    coins: 300
+    chance-drop: 6

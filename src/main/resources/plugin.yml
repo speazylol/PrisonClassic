@@ -1,0 +1,141 @@
+name: PrisonClassic
+version: 4.3.0
+main: dev.prisonclassic.PrisonClassic
+api-version: '1.21'
+description: Prison Classic / Normal — 24 шахты, уровни 1-40, тренер, /up, кастомные чары, боссы, катакомбы, камеры и коллекции, церковь, нужды, войны Семей, экономика с AutoSell_Premium
+commands:
+  spawn:
+    description: Телепорт на спавн
+  mine:
+    description: Список шахт / телепорт в шахту
+    usage: /mine [название]
+  level:
+    description: Информация об уровне и повышение
+    aliases: [lvl]
+    usage: /level [up]
+  rankup:
+    description: Повысить уровень
+  sell:
+    description: Продать всё из инвентаря
+    aliases: [sellall, продать]
+  autosell:
+    description: Автопродажа добытого
+    aliases: [as]
+  balance:
+    description: Баланс
+    aliases: [bal, money]
+  pay:
+    description: Перевести деньги
+    usage: /pay <игрок> <сумма>
+  cell:
+    description: Камеры
+    usage: /cell [buy|list|add|remove|leave]
+  faction:
+    description: Фракции
+    usage: /faction [join <id>]
+  fleave:
+    description: Покинуть фракцию
+  base:
+    description: Телепорт на базу фракции
+  quest:
+    description: Ежедневные квесты
+    aliases: [quests, qu]
+  trainer:
+    description: Тренер прокачки
+  ec:
+    description: Эндер-сундук (36 слотов)
+    aliases: [enderchest]
+  top:
+    description: Топы
+    usage: /top <level|blocks|day|kills>
+  keys:
+    description: Ключи и кейсы
+    usage: /keys [open <тип>]
+  exchange:
+    description: Обмены (звёзды, ключи, пыль, трофеи)
+  active:
+    description: Активка (кража сердец)
+  up:
+    description: Улучшить предмет в руке (как на Вайме)
+    aliases: [upgrade]
+  shop:
+    description: Магазин (еда, бумага, мыло, инструменты)
+  auc:
+    description: Аукцион
+    aliases: [ah, auction]
+    usage: /auc [sell <цена>]
+  pmine:
+    description: Личная шахта
+    aliases: [lmine]
+  church:
+    description: Телепорт в церковь (лекарство, служение)
+  needs:
+    description: Нужды и болезнь
+  points:
+    description: Точки захвата на Базе
+  gang:
+    description: Банда
+    aliases: [banda, банда]
+  g:
+    description: Чат банды
+  family:
+    description: Семья
+    aliases: [fam]
+  six:
+    description: Шестёрки в камере
+    aliases: [sixes, шестерки]
+  sieve:
+    description: Сито (щебень)
+    aliases: [sito]
+  awaken:
+    description: Заточка и пробуждение вещей (осколки)
+  lufonia:
+    description: Телепорт в деревню Люфония (с 20 уровня)
+  warp:
+    description: Локации (спавн, шахты, камеры, База, подвал, деревня)
+    aliases: [warps, locations, локации]
+  dungeon:
+    description: Вампирские катакомбы (группа из 3, тайм-аттак)
+    aliases: [catacombs, катакомбы]
+    usage: /dungeon [invite|accept|leave|start|top]
+  fw:
+    description: Войны Семей за контрольные точки
+    aliases: [familywar, войны]
+    usage: /fw [attack <точка>]
+  ttt:
+    description: Крестики-нолики на монеты
+    aliases: [tictactoe, крестики]
+    usage: /ttt <ник> <сумма> | accept | deny
+  collection:
+    description: Коллекции «Наследие Предков»
+    aliases: [collections, коллекция]
+  donate:
+    description: Донат-привилегии, ежедневная награда, магазин за звёзды
+    aliases: [donateshop]
+  prisonadmin:
+    description: Админ-команды
+    aliases: [pa]
+    permission: prison.admin
+permissions:
+  prison.admin:
+    default: op
+  prison.autosell:
+    default: false
+  AutoSell_Premium:
+    description: Премиум /sell (мгновенный выкуп инвентаря) и /autosell
+    default: false
+  prison.autosell.premium:
+    description: То же, что AutoSell_Premium
+    default: false
+  prison.noneeds:
+    default: false
+  prison.donate.1:
+    default: false
+  prison.donate.2:
+    default: false
+  prison.donate.3:
+    default: false
+  prison.donate.4:
+    default: false
+  prison.donate.5:
+    default: false
